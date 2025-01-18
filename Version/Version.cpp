@@ -68,11 +68,6 @@ BOOL WINAPI DllMain(HINSTANCE hinst_dll, DWORD fdw_reason, LPVOID)
 		if (InitApi)
 			InitApi();
 	}
-	else if (fdw_reason == DLL_PROCESS_DETACH)
-	{
-		FreeLibrary(m_hinst_asa_api_dll);
-		FreeLibrary(m_hinst_version_dll);
-	}
 
 	return TRUE;
 }
