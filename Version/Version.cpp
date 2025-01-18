@@ -4,35 +4,35 @@
 
 std::filesystem::path get_exe_path()
 {
-    TCHAR buffer[MAX_PATH];
+	wchar_t buffer[MAX_PATH];
     GetModuleFileNameW(NULL, buffer, _countof(buffer));
     return std::filesystem::path(buffer).parent_path();
 }
 
 std::filesystem::path find_api_directory()
 {
-    return get_exe_path()/(TEXT(R"(ArkApi)"));
+    return get_exe_path()/"ArkApi";
 }
 
 std::filesystem::path find_dll()
 {
-    return find_api_directory()/(TEXT(R"(AsaApi.dll)"));
+    return find_api_directory()/"AsaApi.dll";
 }
 
 std::filesystem::path get_sys_path()
 {
-	TCHAR sys_dir[MAX_PATH];
+	wchar_t sys_dir[MAX_PATH];
 	GetSystemDirectoryW(sys_dir, MAX_PATH);
-	return std::filesystem::path(sys_dir);
+	return sys_dir;
 }
 
 std::filesystem::path find_vdll()
 {
-	return get_sys_path()/(TEXT(R"(Version.dll)"));
+	return get_sys_path()/"Version.dll";
 }
 
-HINSTANCE m_hinst_dll = nullptr;
-HINSTANCE m_hinst_dll2 = nullptr;
+HINSTANCE m_hinst_version_dll = nullptr;
+HINSTANCE m_hinst_asa_api_dll = nullptr;
 extern "C" UINT_PTR mProcs[17]{ 0 };
 
 LPCSTR import_names[] = {
@@ -49,29 +49,29 @@ BOOL WINAPI DllMain(HINSTANCE hinst_dll, DWORD fdw_reason, LPVOID)
 		DisableThreadLibraryCalls(hinst_dll);
 
 		std::wstring vdllName = find_vdll().native();
-		m_hinst_dll = LoadLibraryW(vdllName.c_str());
-		if (m_hinst_dll == nullptr)
+		m_hinst_version_dll = LoadLibraryW(vdllName.c_str());
+		if (m_hinst_version_dll == nullptr)
 			return FALSE;
 
 		for (int i = 0; i < 17; i++)
 		{
-			mProcs[i] = reinterpret_cast<UINT_PTR>(GetProcAddress(m_hinst_dll, import_names[i]));
+			mProcs[i] = reinterpret_cast<UINT_PTR>(GetProcAddress(m_hinst_version_dll, import_names[i]));
 		}
 
 		std::wstring dllName = find_dll().native();
-		m_hinst_dll2 = LoadLibraryW(dllName.c_str());
-		if (m_hinst_dll2 == nullptr)
+		m_hinst_asa_api_dll = LoadLibraryW(dllName.c_str());
+		if (m_hinst_asa_api_dll == nullptr)
 			return FALSE;
 
 		using InitFuncType = void (*)();
-		InitFuncType InitApi = reinterpret_cast<InitFuncType>(GetProcAddress(m_hinst_dll2, "InitApi"));
+		InitFuncType InitApi = reinterpret_cast<InitFuncType>(GetProcAddress(m_hinst_asa_api_dll, "InitApi"));
 		if (InitApi)
 			InitApi();
 	}
 	else if (fdw_reason == DLL_PROCESS_DETACH)
 	{
-		FreeLibrary(m_hinst_dll2);
-		FreeLibrary(m_hinst_dll);
+		FreeLibrary(m_hinst_asa_api_dll);
+		FreeLibrary(m_hinst_version_dll);
 	}
 
 	return TRUE;
